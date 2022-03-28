@@ -1,5 +1,6 @@
 [package]
 name = "no_debug"
+repository = "https://github.com/Cypher1/no_debug"
 version = "1.0.0"
 edition = "2021"
 license = "MIT"
