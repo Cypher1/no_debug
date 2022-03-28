@@ -1,9 +1,9 @@
 [package]
 name = "no_debug"
 repository = "https://github.com/Cypher1/no_debug"
-version = "2.0.0"
+version = "2.0.1"
 edition = "2021"
 license = "MIT"
-description = "Helper types to omit debug and display info for select values."
+description = "Helper types to omit debug info for select values."
 
 [dependencies]
