@@ -1,2 +1,3 @@
 # no_debug
-Helper crate to omit debug and display info for some values
+
+Helper types to omit debug and display info for select values.
