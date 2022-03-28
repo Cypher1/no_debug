@@ -3,7 +3,7 @@
 //! Provides wrapper structs with default `Debug` and Display impls.
 //! This allows you to use the default implementation of `Debug` for large structs while enabling you
 //! to:
-//! - avoid using `Debug` impls that construct deeply nested or overly large structures,
+//! - avoid using `Debug` impls that traverse deeply nested or overly large structures,
 //! - avoid using a `Debug` impl that leaks info that should not be logged.
 //!
 //! This can improve:
@@ -71,7 +71,7 @@ impl<T> DerefMut for NoDebug<T> {
 
 /// Wraps a type `T` and provides a `Display` impl that does not rely on `T` being `Display`.
 ///
-/// Provided for completeness (to mirror `NoDebug`).
+/// Provided for completeness (to mirror [`NoDebug`]).
 pub struct NoDisplay<T>(T);
 
 impl<T> NoDisplay<T> {
