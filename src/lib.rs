@@ -1,6 +1,6 @@
-//! Helper types to omit debug and display info for select values.
+//! Helper types to omit debug info for select values.
 //!
-//! Provides wrapper structs with default `Debug` and Display impls.
+//! Provides wrapper structs with default `Debug` impls.
 //! This allows you to use the default implementation of `Debug` for large structs while enabling you
 //! to:
 //! - avoid using `Debug` impls that traverse deeply nested or overly large structures,
@@ -38,15 +38,22 @@
 //! // visible again.
 //! assert_eq!(format!("{:?}", *user.password), r#""hunter2""#);
 
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 
 /// Wraps a type `T` and provides a `Debug` impl that does not rely on `T` being `Debug`.
+#[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
 pub struct NoDebug<T>(T);
 
 impl<T> NoDebug<T> {
     pub fn new(value: T) -> Self {
         Self(value)
+    }
+}
+
+impl<T> From<T> for NoDebug<T> {
+    fn from(value: T) -> Self {
+        Self::new(value)
     }
 }
 
@@ -69,79 +76,53 @@ impl<T> DerefMut for NoDebug<T> {
     }
 }
 
-/// Wraps a type `T` and provides a `Display` impl that does not rely on `T` being `Display`.
-///
-/// Provided for completeness (to mirror [`NoDebug`]).
-pub struct NoDisplay<T>(T);
-
-impl<T> NoDisplay<T> {
-    pub fn new(value: T) -> Self {
-        Self(value)
-    }
-}
-
-impl<T> Display for NoDisplay<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "<no display: {}>", std::any::type_name::<T>())
-    }
-}
-
-impl<T> Deref for NoDisplay<T> {
-    type Target = T;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<T> DerefMut for NoDisplay<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn cannot_debug_nodebug() {
-        let result = NoDebug::new(3);
-        assert_eq!(format!("{:?}", result), "<no debug: i32>")
+        let value = NoDebug::new(3);
+        assert_eq!(format!("{:?}", value), "<no debug: i32>")
+    }
+
+    #[test]
+    fn cannot_debug_nodebug_via_into() {
+        let value: NoDebug<i32> = 3.into();
+        assert_eq!(format!("{:?}", value), "<no debug: i32>")
     }
 
     #[test]
     fn dereferences_nodebug() {
-        let result = NoDebug::new(3);
-        assert_eq!(format!("{:?}", result), "<no debug: i32>");
-        assert_eq!(format!("{:?}", *result), "3");
+        let value = NoDebug::new(3);
+        assert_eq!(format!("{:?}", value), "<no debug: i32>");
+        assert_eq!(format!("{:?}", *value), "3");
     }
 
     #[test]
     fn mut_dereferences_nodebug() {
-        let mut result = NoDebug::new(3);
-        *result = 4;
-        assert_eq!(format!("{:?}", result), "<no debug: i32>");
-        assert_eq!(format!("{:?}", *result), "4");
+        let mut value = NoDebug::new(3);
+        *value = 4;
+        assert_eq!(format!("{:?}", value), "<no debug: i32>");
+        assert_eq!(format!("{:?}", *value), "4");
     }
 
     #[test]
-    fn cannot_display_nodisplay() {
-        let result = NoDisplay::new(3);
-        assert_eq!(format!("{}", result), "<no display: i32>")
+    fn has_eq_with_inner() {
+        let value = NoDebug::new(3);
+        assert_eq!(*value, 3);
     }
 
     #[test]
-    fn dereferences_nodisplay() {
-        let result = NoDisplay::new(3);
-        assert_eq!(format!("{}", result), "<no display: i32>");
-        assert_eq!(format!("{}", *result), "3");
+    fn has_eq_with_raw_value_into_no_debug() {
+        let value = NoDebug::new(3);
+        assert_eq!(value, 3.into());
     }
 
     #[test]
-    fn mut_dereferences_nodisplay() {
-        let mut result = NoDisplay::new(3);
-        *result = 4;
-        assert_eq!(format!("{}", result), "<no display: i32>");
-        assert_eq!(format!("{}", *result), "4");
+    fn has_eq_with_another_no_debug() {
+        let value = NoDebug::new(3);
+        let other = NoDebug::new(3);
+        assert_eq!(value, other);
     }
 }
