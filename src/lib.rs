@@ -14,23 +14,29 @@
 //!
 //! Example usage: Hiding a user's password from logs.
 //! ```rust
-//! use no_debug::NoDebug;
+//! use no_debug::{NoDebug, Hidden};
 //!
 //! #[derive(Debug)]
 //! struct UserInfo {
 //!   username: String,
 //!   password: NoDebug<String>,
+//!   posts: NoDebug<Vec<String>, Hidden>,
 //! }
 //!
 //! let user = UserInfo {
 //!     username: "Cypher1".to_string(),
-//!     password: "hunter2".to_string().into()
+//!     password: "hunter2".to_string().into(),
+//!     posts: vec![
+//!         "long post 1...".to_string(),
+//!         "long post 2...".to_string(),
+//!         "long post 3...".to_string(),
+//!     ].into()
 //! };
 //!
 //! // The password is hidden by default
 //! assert_eq!(
 //!     format!("{:?}", user),
-//!     r#"UserInfo { username: "Cypher1", password: <no debug: alloc::string::String> }"#
+//!     r#"UserInfo { username: "Cypher1", password: <no debug: alloc::string::String>, posts: ... }"#
 //! );
 //! // Even when accessed
 //! assert_eq!(format!("{:?}", user.password), r#"<no debug: alloc::string::String>"#);
@@ -45,54 +51,54 @@ pub trait Msg<T> {
     fn fmt(value: &T, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error>;
 }
 
+#[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
 pub struct WithTypeInfo;
 
 impl <T> Msg<T> for WithTypeInfo {
-    fn fmt(value: &T, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(_value: &T, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         write!(f, "<no debug: {}>", std::any::type_name::<T>())
     }
 }
 
-pub struct WithStaticStr<const Str: &'static str="<no debug>">;
+#[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
+pub struct Hidden;
 
-pub type Hidden = WithStaticStr;
-
-impl <T, const Str: &'static str> Msg<T> for WithStaticStr<const Str: &'static str>{
-    fn fmt(value: &T, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "{}", Str)
+impl <T> Msg<T> for Hidden {
+    fn fmt(_value: &T, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "...")
     }
 }
 
 /// Wraps a type `T` and provides a `Debug` impl that does not rely on `T` being `Debug`.
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
-pub struct NoDebug<T, M: Msg<T>=WithTypeInfo>(T);
+pub struct NoDebug<T, M: Msg<T>=WithTypeInfo>(T, std::marker::PhantomData<M>);
 
 impl<T> NoDebug<T, WithTypeInfo> {
     pub fn new(value: T) -> Self {
-        Self(value)
+        value.into()
     }
 }
 
 impl<T, M: Msg<T>> From<T> for NoDebug<T, M> {
     fn from(value: T) -> Self {
-        Self(value)
+        Self(value, std::marker::PhantomData::default())
     }
 }
 
 impl<T, M: Msg<T>> Debug for NoDebug<T, M> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        Msg::fmt(f, self.0)
+        M::fmt(&self.0, f)
     }
 }
 
-impl<T, M> Deref for NoDebug<T, M> {
+impl<T, M: Msg<T>> Deref for NoDebug<T, M> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<T, M> DerefMut for NoDebug<T, M> {
+impl<T, M: Msg<T>> DerefMut for NoDebug<T, M> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -115,12 +121,6 @@ mod tests {
     }
 
     #[test]
-    fn can_hide_type_info() {
-        let value: NoDebug<i32, Hidden> = 3.into();
-        assert_eq!(format!("{:?}", value), "<no debug>")
-    }
-
-    #[test]
     fn can_show_type_info() {
         let value: NoDebug<i32, WithTypeInfo> = 3.into();
         assert_eq!(format!("{:?}", value), "<no debug: i32>")
@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn can_show_custom_message() {
-        let value: NoDebug<i32, WithStaticStr<"...">> = 3.into();
+        let value: NoDebug<i32, Hidden> = 3.into();
         assert_eq!(format!("{:?}", value), "...")
     }
 
