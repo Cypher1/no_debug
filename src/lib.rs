@@ -38,9 +38,9 @@
 //!     format!("{:?}", user),
 //!     r#"UserInfo { username: "Cypher1", password: <no debug: alloc::string::String>, posts: ... }"#
 //! );
-//! // Even when accessed
+//! // And when accessed
 //! assert_eq!(format!("{:?}", user.password), r#"<no debug: alloc::string::String>"#);
-//! // But is can be extracted easily for operating on the data inside, at which point it is
+//! // But it can be extracted easily for operating on the data inside, at which point it is
 //! // visible again.
 //! assert_eq!(format!("{:?}", *user.password), r#""hunter2""#);
 
