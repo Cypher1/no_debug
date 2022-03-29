@@ -24,7 +24,7 @@
 //!
 //! let user = UserInfo {
 //!     username: "Cypher1".to_string(),
-//!     password: NoDebug::new("hunter2".to_string())
+//!     password: "hunter2".to_string().into()
 //! };
 //!
 //! // The password is hidden by default
@@ -41,36 +41,58 @@
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 
+pub trait Msg<T> {
+    fn fmt(value: &T, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error>;
+}
+
+pub struct WithTypeInfo;
+
+impl <T> Msg<T> for WithTypeInfo {
+    fn fmt(value: &T, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "<no debug: {}>", std::any::type_name::<T>())
+    }
+}
+
+pub struct WithStaticStr<const Str: &'static str="<no debug>">;
+
+pub type Hidden = WithStaticStr;
+
+impl <T, const Str: &'static str> Msg<T> for WithStaticStr<const Str: &'static str>{
+    fn fmt(value: &T, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "{}", Str)
+    }
+}
+
 /// Wraps a type `T` and provides a `Debug` impl that does not rely on `T` being `Debug`.
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
-pub struct NoDebug<T>(T);
+pub struct NoDebug<T, M: Msg<T>=WithTypeInfo>(T);
 
-impl<T> NoDebug<T> {
+impl<T> NoDebug<T, WithTypeInfo> {
     pub fn new(value: T) -> Self {
         Self(value)
     }
 }
 
-impl<T> From<T> for NoDebug<T> {
+impl<T, M: Msg<T>> From<T> for NoDebug<T, M> {
     fn from(value: T) -> Self {
-        Self::new(value)
+        Self(value)
     }
 }
 
-impl<T> Debug for NoDebug<T> {
+impl<T, M: Msg<T>> Debug for NoDebug<T, M> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "<no debug: {}>", std::any::type_name::<T>())
+        Msg::fmt(f, self.0)
     }
 }
 
-impl<T> Deref for NoDebug<T> {
+impl<T, M> Deref for NoDebug<T, M> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<T> DerefMut for NoDebug<T> {
+impl<T, M> DerefMut for NoDebug<T, M> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -90,6 +112,24 @@ mod tests {
     fn cannot_debug_nodebug_via_into() {
         let value: NoDebug<i32> = 3.into();
         assert_eq!(format!("{:?}", value), "<no debug: i32>")
+    }
+
+    #[test]
+    fn can_hide_type_info() {
+        let value: NoDebug<i32, Hidden> = 3.into();
+        assert_eq!(format!("{:?}", value), "<no debug>")
+    }
+
+    #[test]
+    fn can_show_type_info() {
+        let value: NoDebug<i32, WithTypeInfo> = 3.into();
+        assert_eq!(format!("{:?}", value), "<no debug: i32>")
+    }
+
+    #[test]
+    fn can_show_custom_message() {
+        let value: NoDebug<i32, WithStaticStr<"...">> = 3.into();
+        assert_eq!(format!("{:?}", value), "...")
     }
 
     #[test]
