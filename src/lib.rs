@@ -17,9 +17,9 @@ impl <T> Msg<T> for WithTypeInfo {
 }
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
-pub struct Hidden;
+pub struct Ellipses;
 
-impl <T> Msg<T> for Hidden {
+impl <T> Msg<T> for Ellipses {
     fn fmt(_value: &T, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         write!(f, "...")
     }
@@ -28,6 +28,12 @@ impl <T> Msg<T> for Hidden {
 /// Wraps a type `T` and provides a `Debug` impl that does not rely on `T` being `Debug`.
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
 pub struct NoDebug<T, M: Msg<T>=WithTypeInfo>(T, std::marker::PhantomData<M>);
+
+impl<T, M: Msg<T>> NoDebug<T, M> {
+    pub fn take(self) -> T {
+        self.0
+    }
+}
 
 impl<T> NoDebug<T, WithTypeInfo> {
     pub fn new(value: T) -> Self {
@@ -84,7 +90,7 @@ mod tests {
 
     #[test]
     fn can_show_custom_message() {
-        let value: NoDebug<i32, Hidden> = 3.into();
+        let value: NoDebug<i32, Ellipses> = 3.into();
         assert_eq!(format!("{:?}", value), "...")
     }
 
@@ -101,6 +107,12 @@ mod tests {
         *value = 4;
         assert_eq!(format!("{:?}", value), "<no debug: i32>");
         assert_eq!(format!("{:?}", *value), "4");
+    }
+
+    #[test]
+    fn take_gets_value_from_nodebug() {
+        let value = NoDebug::new(3);
+        assert_eq!(value.take(), 3);
     }
 
     #[test]

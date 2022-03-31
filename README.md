@@ -21,13 +21,13 @@ info),
 
 Example usage: Hiding a user's password from logs.
 ```rust
-use no_debug::{NoDebug, Hidden};
+use no_debug::{NoDebug, WithTypeInfo, Ellipses};
 
 #[derive(Debug)]
 struct UserInfo {
   username: String,
-  password: NoDebug<String>,
-  posts: NoDebug<Vec<String>, Hidden>,
+  password: NoDebug<String>, // Defaults to WithTypeInfo
+  posts: NoDebug<Vec<String>, Ellipses>,
 }
 
 let user = UserInfo {
@@ -54,4 +54,11 @@ assert_eq!(format!("{:?}", user.password), r#"<no debug: alloc::string::String>"
 // But it can be extracted easily for operating on the data inside, at which point it is
 // visible again.
 assert_eq!(format!("{:?}", *user.password), r#""hunter2""#);
+
+// The debug output is based on the Msg type.
+assert_eq!(format!("{:?}", user.posts), r#"..."#);
+
+// Output can be changed easily with a type conversion
+let post_with_type: NoDebug<Vec<String>, WithTypeInfo> = user.posts.take().into();
+assert_eq!(format!("{:?}", post_with_type), r#"<no debug: alloc::vec::Vec<alloc::string::String>>"#);
 ```
