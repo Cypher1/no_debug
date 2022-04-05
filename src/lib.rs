@@ -3,14 +3,19 @@
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 
+/// [Msg] is a trait for defining custom formatters for [NoDebug] values.
 pub trait Msg<T> {
+    /// Prints a custom message to the given formatter without necessarily revealing the values
+    /// information.
+    ///
+    /// Takes a reference to the value being debugged to allow some introspection.
     fn fmt(value: &T, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error>;
 }
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
 pub struct WithTypeInfo;
 
-impl <T> Msg<T> for WithTypeInfo {
+impl<T> Msg<T> for WithTypeInfo {
     fn fmt(_value: &T, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         write!(f, "<no debug: {}>", std::any::type_name::<T>())
     }
@@ -19,15 +24,15 @@ impl <T> Msg<T> for WithTypeInfo {
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
 pub struct Ellipses;
 
-impl <T> Msg<T> for Ellipses {
+impl<T> Msg<T> for Ellipses {
     fn fmt(_value: &T, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         write!(f, "...")
     }
 }
 
-/// Wraps a type `T` and provides a `Debug` impl that does not rely on `T` being `Debug`.
+/// Wraps a type `T` and provides a [Debug] impl that does not rely on `T` being [Debug].
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
-pub struct NoDebug<T, M: Msg<T>=WithTypeInfo>(T, std::marker::PhantomData<M>);
+pub struct NoDebug<T, M: Msg<T> = WithTypeInfo>(T, std::marker::PhantomData<M>);
 
 impl<T, M: Msg<T>> NoDebug<T, M> {
     pub fn take(self) -> T {
