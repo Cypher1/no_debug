@@ -34,34 +34,34 @@ impl<T> Msg<T> for Ellipses {
 #[derive(Eq, Ord, Clone)]
 pub struct NoDebug<T, M: Msg<T> = WithTypeInfo>(T, std::marker::PhantomData<M>);
 
-impl <T: std::hash::Hash, M: Msg<T>> std::hash::Hash for NoDebug<T, M> {
+impl<T: std::hash::Hash, M: Msg<T>> std::hash::Hash for NoDebug<T, M> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.0.hash::<H>(state)
     }
 }
 
-impl <T: PartialOrd, M: Msg<T>> std::cmp::PartialOrd<T> for NoDebug<T, M> {
-  fn partial_cmp(&self, other: &T) -> Option<std::cmp::Ordering> {
-      self.0.partial_cmp(other)
-  }
+impl<T: PartialOrd, M: Msg<T>> std::cmp::PartialOrd<T> for NoDebug<T, M> {
+    fn partial_cmp(&self, other: &T) -> Option<std::cmp::Ordering> {
+        self.0.partial_cmp(other)
+    }
 }
 
-impl <T: PartialOrd, M: Msg<T>, N: Msg<T>> std::cmp::PartialOrd<NoDebug<T, N>> for NoDebug<T, M> {
-  fn partial_cmp(&self, other: &NoDebug<T, N>) -> Option<std::cmp::Ordering> {
-      self.0.partial_cmp(&**other)
-  }
+impl<T: PartialOrd, M: Msg<T>, N: Msg<T>> std::cmp::PartialOrd<NoDebug<T, N>> for NoDebug<T, M> {
+    fn partial_cmp(&self, other: &NoDebug<T, N>) -> Option<std::cmp::Ordering> {
+        self.0.partial_cmp(&**other)
+    }
 }
 
-impl <T: PartialEq, M: Msg<T>> std::cmp::PartialEq<T> for NoDebug<T, M> {
-  fn eq(&self, other: &T) -> bool {
-      &self.0 == other
-  }
+impl<T: PartialEq, M: Msg<T>> std::cmp::PartialEq<T> for NoDebug<T, M> {
+    fn eq(&self, other: &T) -> bool {
+        &self.0 == other
+    }
 }
 
-impl <T: PartialEq, M: Msg<T>, N: Msg<T>> std::cmp::PartialEq<NoDebug<T, N>> for NoDebug<T, M> {
-  fn eq(&self, other: &NoDebug<T, N>) -> bool {
-      **self == **other
-  }
+impl<T: PartialEq, M: Msg<T>, N: Msg<T>> std::cmp::PartialEq<NoDebug<T, N>> for NoDebug<T, M> {
+    fn eq(&self, other: &NoDebug<T, N>) -> bool {
+        **self == **other
+    }
 }
 
 impl<T, M: Msg<T>> NoDebug<T, M> {
@@ -196,9 +196,12 @@ mod tests {
         assert!(value < other);
     }
 
-    fn get_hash<T>(obj: T) -> u64 where T: std::hash::Hash {
-        use std::hash::Hasher;
+    fn get_hash<T>(obj: T) -> u64
+    where
+        T: std::hash::Hash,
+    {
         use std::collections::hash_map::DefaultHasher;
+        use std::hash::Hasher;
         let mut hasher = DefaultHasher::new();
         obj.hash(&mut hasher);
         hasher.finish()
