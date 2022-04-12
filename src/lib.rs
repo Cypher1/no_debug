@@ -12,7 +12,7 @@ pub trait Msg<T> {
     fn fmt(value: &T, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error>;
 }
 
-#[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
+#[derive(Debug, Clone)]
 pub struct WithTypeInfo;
 
 impl<T> Msg<T> for WithTypeInfo {
@@ -21,7 +21,7 @@ impl<T> Msg<T> for WithTypeInfo {
     }
 }
 
-#[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
+#[derive(Debug, Clone)]
 pub struct Ellipses;
 
 impl<T> Msg<T> for Ellipses {
@@ -31,8 +31,38 @@ impl<T> Msg<T> for Ellipses {
 }
 
 /// Wraps a type `T` and provides a [Debug] impl that does not rely on `T` being [Debug].
-#[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
+#[derive(Eq, Ord, Clone)]
 pub struct NoDebug<T, M: Msg<T> = WithTypeInfo>(T, std::marker::PhantomData<M>);
+
+impl <T: std::hash::Hash, M: Msg<T>> std::hash::Hash for NoDebug<T, M> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash::<H>(state)
+    }
+}
+
+impl <T: PartialOrd, M: Msg<T>> std::cmp::PartialOrd<T> for NoDebug<T, M> {
+  fn partial_cmp(&self, other: &T) -> Option<std::cmp::Ordering> {
+      self.0.partial_cmp(other)
+  }
+}
+
+impl <T: PartialOrd, M: Msg<T>, N: Msg<T>> std::cmp::PartialOrd<NoDebug<T, N>> for NoDebug<T, M> {
+  fn partial_cmp(&self, other: &NoDebug<T, N>) -> Option<std::cmp::Ordering> {
+      self.0.partial_cmp(&**other)
+  }
+}
+
+impl <T: PartialEq, M: Msg<T>> std::cmp::PartialEq<T> for NoDebug<T, M> {
+  fn eq(&self, other: &T) -> bool {
+      &self.0 == other
+  }
+}
+
+impl <T: PartialEq, M: Msg<T>, N: Msg<T>> std::cmp::PartialEq<NoDebug<T, N>> for NoDebug<T, M> {
+  fn eq(&self, other: &NoDebug<T, N>) -> bool {
+      **self == **other
+  }
+}
 
 impl<T, M: Msg<T>> NoDebug<T, M> {
     pub fn take(self) -> T {
@@ -127,9 +157,9 @@ mod tests {
     }
 
     #[test]
-    fn has_eq_with_raw_value_into_no_debug() {
+    fn has_eq_with_raw_value() {
         let value = NoDebug::new(3);
-        assert_eq!(value, 3.into());
+        assert_eq!(value, 3);
     }
 
     #[test]
@@ -137,5 +167,60 @@ mod tests {
         let value = NoDebug::new(3);
         let other = NoDebug::new(3);
         assert_eq!(value, other);
+    }
+
+    #[test]
+    fn has_eq_with_another_no_debug_with_different_msg() {
+        let value: NoDebug<i32, Ellipses> = 3.into();
+        let other: NoDebug<i32, WithTypeInfo> = 3.into();
+        assert_eq!(value, other);
+    }
+
+    #[test]
+    fn has_ord_with_raw_value() {
+        let value = NoDebug::new(2);
+        assert!(value < 3);
+    }
+
+    #[test]
+    fn has_ord_with_another_no_debug() {
+        let value = NoDebug::new(2);
+        let other = NoDebug::new(3);
+        assert!(value < other);
+    }
+
+    #[test]
+    fn has_ord_with_another_no_debug_with_different_msg() {
+        let value: NoDebug<i32, Ellipses> = 2.into();
+        let other: NoDebug<i32, WithTypeInfo> = 3.into();
+        assert!(value < other);
+    }
+
+    fn get_hash<T>(obj: T) -> u64 where T: std::hash::Hash {
+        use std::hash::Hasher;
+        use std::collections::hash_map::DefaultHasher;
+        let mut hasher = DefaultHasher::new();
+        obj.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    #[test]
+    fn has_hash_with_raw_value() {
+        let value: NoDebug<i32> = 3.into();
+        assert_eq!(get_hash(value), get_hash(3));
+    }
+
+    #[test]
+    fn has_hash_with_another_no_debug() {
+        let value: NoDebug<i32> = 3.into();
+        let other: NoDebug<i32> = 3.into();
+        assert_eq!(get_hash(value), get_hash(other));
+    }
+
+    #[test]
+    fn has_hash_with_another_no_debug_with_different_msg() {
+        let value: NoDebug<i32, Ellipses> = 3.into();
+        let other: NoDebug<i32, WithTypeInfo> = 3.into();
+        assert_eq!(get_hash(value), get_hash(other));
     }
 }
